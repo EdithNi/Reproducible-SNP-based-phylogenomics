@@ -1,0 +1,31 @@
+# config/config.yaml
+# Configuration file for reproducible SNP-based phylogenomics of Salmonella Kentucky ST198
+
+# Directories
+raw_reads_dir: "data/raw_reads"
+clean_reads_dir: "results/clean_reads"
+assembly_dir: "results/assembly"
+snp_dir: "results/snps"
+phylogeny_dir: "results/phylogeny"
+amr_dir: "results/amr"
+
+# Reference genome
+reference_genome: "reference/98K.fasta"
+
+# Tools versions
+tools:
+  fqCleanER: "v0.1"
+  SPAdes: "v3.6.0"
+  Snippy: "v4.6.0"
+  RAxML: "v8.2.12"
+  ResFinder: "v4.1"
+
+# Phylogeny parameters
+raxml:
+  model: "GTRGAMMAI"
+  bootstrap: 1000
+
+# ResFinder parameters
+resfinder:
+  threshold_identity: 90
+  threshold_coverage: 60
