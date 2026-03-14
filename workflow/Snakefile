@@ -1,84 +1,79 @@
+# workflow/Snakefile
+import yaml
+
+# Load config
+configfile: "../config/config.yaml"
+
+raw_reads_dir = config["raw_reads_dir"]
+clean_reads_dir = config["clean_reads_dir"]
+assembly_dir = config["assembly_dir"]
+snp_dir = config["snp_dir"]
+phylogeny_dir = config["phylogeny_dir"]
+amr_dir = config["amr_dir"]
+ref_genome = config["reference_genome"]
+
+samples = ["sample1","sample2"]  # Remplacer par la liste des fichiers réels
+
 rule all:
     input:
-        "results/phylogeny/tree.nwk",
-        "results/amr/resfinder_results.txt"
-
+        expand(phylogeny_dir + "/tree.nwk"),
+        expand(amr_dir + "/{sample}_resfinder.txt", sample=samples)
 
 rule clean_reads:
     input:
-        R1="data/raw_reads/{sample}_R1.fastq.gz",
-        R2="data/raw_reads/{sample}_R2.fastq.gz"
+        R1 = raw_reads_dir + "/{sample}_R1.fastq.gz",
+        R2 = raw_reads_dir + "/{sample}_R2.fastq.gz"
     output:
-        R1="results/clean_reads/{sample}_R1.clean.fastq.gz",
-        R2="results/clean_reads/{sample}_R2.clean.fastq.gz"
+        R1 = clean_reads_dir + "/{sample}_R1.clean.fastq.gz",
+        R2 = clean_reads_dir + "/{sample}_R2.clean.fastq.gz"
     shell:
         """
-        fqCleanER \
-        -i {input.R1} \
-        -I {input.R2} \
-        -o results/clean_reads/
+        fqCleanER -i {input.R1} -I {input.R2} -o {clean_reads_dir}/
         """
-
 
 rule assembly:
     input:
-        R1="results/clean_reads/{sample}_R1.clean.fastq.gz",
-        R2="results/clean_reads/{sample}_R2.clean.fastq.gz"
+        R1 = clean_reads_dir + "/{sample}_R1.clean.fastq.gz",
+        R2 = clean_reads_dir + "/{sample}_R2.clean.fastq.gz"
     output:
-        "results/assembly/{sample}/contigs.fasta"
+        assembly_dir + "/{sample}/contigs.fasta"
     shell:
         """
-        spades.py \
-        --careful \
-        -1 {input.R1} \
-        -2 {input.R2} \
-        -o results/assembly/{wildcards.sample}
+        spades.py --careful -1 {input.R1} -2 {input.R2} -o {assembly_dir}/{wildcards.sample}
         """
-
 
 rule snp_calling:
     input:
-        R1="results/clean_reads/{sample}_R1.clean.fastq.gz",
-        R2="results/clean_reads/{sample}_R2.clean.fastq.gz"
+        R1 = clean_reads_dir + "/{sample}_R1.clean.fastq.gz",
+        R2 = clean_reads_dir + "/{sample}_R2.clean.fastq.gz"
     output:
-        "results/snps/{sample}/snps.vcf"
+        snp_dir + "/{sample}/snps.vcf"
     params:
-        ref="reference/98K.fasta"
+        ref = ref_genome
     shell:
         """
-        snippy \
-        --ref {params.ref} \
-        --R1 {input.R1} \
-        --R2 {input.R2} \
-        --outdir results/snps/{wildcards.sample}
+        snippy --ref {params.ref} --R1 {input.R1} --R2 {input.R2} --outdir {snp_dir}/{wildcards.sample}
         """
-
 
 rule phylogeny:
     input:
-        "results/snps/core.full.aln"
+        snp_dir + "/core.full.aln"
     output:
-        "results/phylogeny/tree.nwk"
+        phylogeny_dir + "/tree.nwk"
+    params:
+        model = config["raxml"]["model"],
+        bootstrap = config["raxml"]["bootstrap"]
     shell:
         """
-        raxmlHPC \
-        -s {input} \
-        -n tree \
-        -m GTRGAMMAI \
-        -# 1000 \
-        -p 12345 \
-        -w results/phylogeny/
+        raxmlHPC -s {input} -n tree -m {params.model} -# {params.bootstrap} -p 12345 -w {phylogeny_dir}/
         """
-
 
 rule resfinder:
     input:
-        "results/assembly/{sample}/contigs.fasta"
+        assembly_dir + "/{sample}/contigs.fasta"
     output:
-        "results/amr/{sample}_resfinder.txt"
+        amr_dir + "/{sample}_resfinder.txt"
     shell:
         """
-        run_resfinder.py \
-        -ifa {input} \
-        -o results/amr/{wildcards.sample}
+        run_resfinder.py -ifa {input} -o {amr_dir}/{wildcards.sample}
         """
