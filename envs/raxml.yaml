@@ -1,0 +1,6 @@
+name: raxml_env
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - raxml=8.2.12
