@@ -1,262 +1,107 @@
-# Reproducible-SNP-based-phylogenomics
-
 # Reproducible Phylogenomics of Multidrug-Resistant *Salmonella enterica* serovar Kentucky ST198 in Burkina Faso
 
 ## Overview
 
-This repository provides the bioinformatics workflow used to investigate the population structure and antimicrobial resistance determinants of *Salmonella enterica* serovar Kentucky ST198 isolates collected in Burkina Faso. The analysis was conducted within a One Health surveillance framework integrating isolates from clinical and food sources.
+This repository provides a **reproducible bioinformatics workflow** used to investigate the population structure and antimicrobial resistance determinants of *Salmonella enterica* serovar Kentucky ST198 isolates collected in Burkina Faso within a **One Health surveillance framework**.  
 
-The workflow implements a reproducible genomic epidemiology pipeline including:
+The workflow integrates **quality control, genome assembly, genotyping, SNP phylogenomics, phylogenetic reconstruction, and antimicrobial resistance profiling**.  
 
-- quality control of sequencing reads
-- genome assembly
-- in silico genotyping
-- high-resolution SNP phylogenomics
-- antimicrobial resistance gene detection
+All sequencing data are publicly available in the European Nucleotide Archive (ENA) under:
 
-The objective is to reconstruct the evolutionary relationships and resistance profiles of multidrug-resistant *Salmonella Kentucky* ST198 isolates circulating in West Africa.
-
-All sequencing data are publicly available in the European Nucleotide Archive (ENA) under accession:
-
-PRJEB44192
+**PRJEB44192**
 
 ---
 
-## Study design
+## Study Design
 
-A total of 161 *Salmonella* isolates collected from clinical and food sources in Ouagadougou between 2017 and 2018 were whole-genome sequenced. Following initial screening and serotype identification, isolates belonging to serovar Kentucky were selected for in-depth phylogenomic analysis.
-
-The isolates were analyzed in the context of the globally disseminated ST198 lineage.
-
----
-
-# Bioinformatics workflow
-
-The analysis was performed using a reproducible pipeline integrating open-source bioinformatics tools commonly used in bacterial genomics.
-
-## 1. Raw read preprocessing
-
-Raw Illumina paired-end reads were quality filtered to remove:
-
-- low-quality bases
-- sequencing adapters
-- short reads
-
-Tool used:
-
-fqCleanER v0.1
-
-Example command:
-
-fqCleanER -i sample_R1.fastq -I sample_R2.fastq -o cleaned_reads/
-
-Output:
-- filtered paired-end reads ready for assembly
+- **Total isolates:** 161 *Salmonella* collected from clinical and food sources in Ouagadougou (2017–2018).  
+- **Focus:** isolates belonging to serovar Kentucky (ST198).  
+- **Goal:** investigate high-resolution population structure and evolution of multidrug-resistant clones.
 
 ---
 
-## 2. De novo genome assembly
+## Bioinformatics Workflow
 
-High-quality reads were assembled into draft genomes using the SPAdes assembler.
+The analysis was implemented in **Snakemake** to ensure **reproducibility and transparency**.
 
-Assembler:
+### 1. Raw Read Preprocessing
 
-SPAdes v3.6.0
+- Tool: **fqCleanER v0.1**  
+- Remove low-quality reads, adapters, and short sequences.  
 
-Command example:
+### 2. Genome Assembly
 
-spades.py \
---careful \
--1 cleaned_R1.fastq \
--2 cleaned_R2.fastq \
--o spades_output/
+- Tool: **SPAdes v3.6.0**  
+- *De novo* assembly of high-quality reads.  
 
-Outputs:
+### 3. Genotyping and cgMLST
 
-- contigs.fasta
-- assembly statistics
+- Tool: **EnteroBase cgMLST / HierCC**  
+- Confirm ST198 lineage and global context.
 
-Assemblies were inspected to verify genome size consistency with *Salmonella enterica* (~4.7–5.0 Mb).
+### 4. SNP Calling
 
----
+- Tool: **Snippy v4.6.0**  
+- Reference: *Salmonella Kentucky* strain 98K  
+- Generate core SNP alignment for high-resolution phylogeny.
 
-## 3. In silico genotyping and cgMLST typing
+### 5. Phylogenetic Reconstruction
 
-Genome assemblies were uploaded to EnteroBase for:
+- Tool: **RAxML v8.2.12**  
+- Model: GTR+I+G, 1000 bootstrap replicates  
+- Build maximum likelihood trees to infer evolutionary relationships.
 
-- MLST confirmation
-- cgMLST analysis
-- hierarchical clustering (HierCC)
+### 6. Antimicrobial Resistance Profiling
 
-This allowed identification of:
+- Tool: **ResFinder v4.1**  
+- Detect resistance genes for beta-lactams, tetracyclines, sulfonamides, and fluoroquinolones.  
+- Identify mutations in *gyrA* and *parC* associated with ciprofloxacin resistance.  
 
-Sequence type:
-ST198
+### 7. Resistance Genomic Islands
 
-Phylogenetic lineage:
-X1-ST198-SGI1
-
-cgMLST also provided context with global *Salmonella Kentucky* genomes.
+- Identify SGI1 variants (SGI1-K1, SGI1-P2, SGI1-K4) linked to multidrug resistance.
 
 ---
 
-## 4. Reference-based SNP calling
+## Repository Structure
 
-High-resolution phylogenomic analysis was conducted using a reference-based SNP approach.
+salmonella_ST198_phylogenomics/
+├── README.md
+├── config/
+│ └── config.yaml
+├── data/
+│ └── raw_reads/
+├── results/
+│ ├── clean_reads/
+│ ├── assembly/
+│ ├── snps/
+│ ├── phylogeny/
+│ └── amr/
+├── scripts/
+├── workflow/
+│ └── Snakefile
+└── envs/
+├── spades.yaml
+├── snippy.yaml
+└── raxml.yaml
 
-Reference genome:
-
-Salmonella Kentucky strain 98K
-
-Pipeline:
-
-Snippy v4.6.0
-
-Example command:
-
-snippy \
---cpus 4 \
---outdir snippy_sample \
---ref reference_98K.fasta \
---R1 cleaned_R1.fastq \
---R2 cleaned_R2.fastq
-
-Outputs:
-
-- core SNP alignment
-- variant calls
-- filtered SNP matrix
 
 ---
 
-## 5. Phylogenetic reconstruction
+## Reproducibility
 
-Maximum likelihood phylogenetic trees were reconstructed from the core SNP alignment.
-
-Software:
-
-RAxML v8.2.12
-
-Model used:
-
-GTR + Gamma + Invariant sites (GTR+I+G)
-
-Bootstrap support:
-
-1000 replicates
-
-Example command:
-
-raxmlHPC \
--s core.full.aln \
--n phylogeny \
--m GTRGAMMAI \
--p 12345 \
--x 12345 \
--# 1000 \
--f a
-
-Outputs:
-
-- best-scoring ML tree
-- bootstrap support values
+- Entire workflow implemented in **Snakemake**.  
+- Tools and versions are defined in **conda environments** (`envs/*.yaml`).  
+- Configuration parameters stored in `config/config.yaml`.  
+- Supports **scalability**, **transparency**, and **reproducibility**.
 
 ---
 
-## 6. Detection of antimicrobial resistance genes
+## How to Run
 
-Antimicrobial resistance genes were identified using the ResFinder database.
+```bash
+# activate conda
+conda activate snakemake
 
-Tool:
-
-ResFinder v4.1
-
-This analysis allowed detection of resistance determinants associated with:
-
-- beta-lactams
-- tetracyclines
-- sulfonamides
-- fluoroquinolones
-
-Fluoroquinolone resistance was associated with mutations in:
-
-gyrA (S83F, D87Y/G)  
-parC (S80I)
-
----
-
-## 7. Identification of resistance genomic islands
-
-Genomic analysis revealed the presence of variants of the Salmonella Genomic Island 1 (SGI1), including:
-
-SGI1-K1  
-SGI1-P2  
-SGI1-K4
-
-These genomic islands are associated with multidrug resistance in *Salmonella Kentucky* ST198.
-
----
-
-# Reproducibility
-
-This repository aims to support transparent and reproducible genomic epidemiology.
-
-All analyses were conducted using open-source tools and publicly available reference genomes.
-
-Sequencing data:
-ENA project PRJEB44192
-
-The workflow described here allows reproduction of:
-
-- genome assemblies
-- SNP calling
-- phylogenetic reconstruction
-- resistance gene identification
-
----
-
-# Repository structure
-
----
-
-# Requirements
-
-Recommended computational environment:
-
-Linux (Ubuntu)
-
-Minimum requirements:
-
-- 8 CPU cores
-- 16 GB RAM
-
-Software dependencies:
-
-fqCleanER v0.1  
-SPAdes v3.6.0  
-Snippy v4.6.0  
-RAxML v8.2.12  
-ResFinder v4.1
-
----
-
-# Citation
-
-If you use this workflow, please cite:
-
-Nikiema et al.  
-High-resolution phylogenomics of multidrug-resistant *Salmonella Kentucky* ST198 in Burkina Faso.
-
----
-
-# Author
-
-Edith Nikiema  
-Molecular Epidemiology and Genomics of Antimicrobial Resistance  
-Burkina Faso
-
----
-
-# License
-
-This project is distributed under an open scientific license to support reproducible research.
+# run workflow
+snakemake --use-conda --cores 8
